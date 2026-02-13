@@ -13,10 +13,10 @@ export function Hero() {
 
             <div className="container relative z-10 flex h-full flex-col items-center justify-center text-center px-4">
                 <h1 className="mb-6 font-serif text-5xl font-bold leading-tight md:text-7xl">
-                    Elevate Your Space <br /> With Timeless Elegance
+                    Welcome to your one-stop shop for Home Essentials!
                 </h1>
                 <p className="mb-8 max-w-2xl text-lg text-gray-200 md:text-xl">
-                    Discover our curated collection of premium furniture and decor designed to transform your home into a sanctuary of style.
+                    From premium Kitchen Gadgets and Elegant Glassware to unique Stationery. We deliver quality to your doorstep anywhere in Pakistan.
                 </p>
                 <div className="flex gap-4">
                     <Button size="lg" className="bg-accent text-white hover:bg-accent/90 border-none" asChild>

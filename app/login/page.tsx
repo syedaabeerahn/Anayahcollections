@@ -25,50 +25,59 @@ export default function LoginPage() {
                 .eq('email', email.trim())
                 .single();
 
-            if (fetchError && fetchError.code === 'PGRST116') {
-                // User doesn't exist, auto-register
-                const { data: newUser, error: signUpError } = await supabase
-                    .from('clients')
-                    .insert([{
-                        email: email.trim(),
-                        password: password,
-                        name: email.split('@')[0]
-                    }])
-                    .select()
-                    .single();
+            if (fetchError) {
+                if (fetchError.code === 'PGRST116') {
+                    // User doesn't exist, auto-register
+                    const { data: newUser, error: signUpError } = await supabase
+                        .from('clients')
+                        .insert([{
+                            email: email.trim(),
+                            password: password.trim(),
+                            name: email.split('@')[0]
+                        }])
+                        .select()
+                        .single();
 
-                if (signUpError) {
-                    alert("Error creating account");
+                    if (signUpError) {
+                        console.error("Sign up error:", signUpError);
+                        alert("Error creating account: " + signUpError.message);
+                        return;
+                    }
+
+                    localStorage.setItem("userEmail", newUser.email);
+                    localStorage.setItem("userPassword", newUser.password);
+                    localStorage.setItem("userName", newUser.name);
+                    setContextUser(newUser.email);
+                    router.push("/");
+                    return;
+                } else {
+                    console.error("Fetch error:", fetchError);
+                    alert("Database error: " + fetchError.message);
                     return;
                 }
-
-                localStorage.setItem("userEmail", newUser.email);
-                localStorage.setItem("userPassword", newUser.password);
-                localStorage.setItem("userName", newUser.name);
-                setContextUser(newUser.email);
-                router.push("/");
-                return;
             }
 
-            if (existingUser && existingUser.password === password.trim()) {
-                // Store credentials in localStorage
-                localStorage.setItem("userEmail", existingUser.email);
-                localStorage.setItem("userPassword", existingUser.password);
-                localStorage.setItem("userName", existingUser.name);
-                setContextUser(existingUser.email);
+            if (existingUser) {
+                if (existingUser.password === password.trim()) {
+                    // Store credentials in localStorage
+                    localStorage.setItem("userEmail", existingUser.email);
+                    localStorage.setItem("userPassword", existingUser.password);
+                    localStorage.setItem("userName", existingUser.name);
+                    setContextUser(existingUser.email);
 
-                // Check if user is admin
-                if (existingUser.email.toLowerCase().trim() === "abeerahnadeem767@gmail.com") {
-                    router.push("/admin");
+                    // Check if user is admin
+                    if (existingUser.email.toLowerCase().trim() === "abeerahnadeem767@gmail.com") {
+                        router.push("/admin");
+                    } else {
+                        router.push("/");
+                    }
                 } else {
-                    router.push("/");
+                    alert("Invalid password");
                 }
-            } else {
-                alert("Invalid password");
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Login error:", error);
-            alert("An error occurred during login");
+            alert("An error occurred during login: " + (error.message || "Unknown error"));
         }
     };
 

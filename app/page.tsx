@@ -54,7 +54,7 @@ export default function Home() {
                 </div>
             </section>
 
-            <section className="py-20 bg-white">
+            <section className="pt-8 pb-20 bg-white">
                 <div className="container mx-auto px-4 text-center">
                     <h2 className="text-3xl font-serif font-bold text-gray-900 mb-6">Join Our Mailing List</h2>
                     <div className="flex gap-4 justify-center">

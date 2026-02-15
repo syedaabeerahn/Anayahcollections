@@ -32,7 +32,7 @@ export default function ProductManager() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch("/api/products");
+            const res = await fetch("/api/products", { cache: 'no-store' });
             const data = await res.json();
             setProducts(data);
             setOriginalProducts(JSON.parse(JSON.stringify(data))); // Deep copy
@@ -77,35 +77,41 @@ export default function ProductManager() {
                 return original && (original.is_in_stock !== p.is_in_stock);
             });
 
+            console.log("Saving changes:", { toDelete: productsToDelete.length, toAdd: productsToAdd.length, toUpdate: productsToUpdate.length });
+
             // Perform deletions
             for (const p of productsToDelete) {
-                await fetch(`/api/products/${p.id}`, { method: "DELETE" });
+                const res = await fetch(`/api/products/${p.id}`, { method: "DELETE" });
+                if (!res.ok) throw new Error(`Failed to delete product: ${p.name}`);
             }
 
             // Perform additions
             for (const p of productsToAdd) {
                 const { id, ...data } = p;
-                await fetch("/api/products", {
+                const res = await fetch("/api/products", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data)
                 });
+                if (!res.ok) throw new Error(`Failed to add product: ${p.name}`);
             }
 
             // Perform updates (stock status)
             for (const p of productsToUpdate) {
-                await fetch(`/api/products/${p.id}`, {
+                const res = await fetch(`/api/products/${p.id}`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ is_in_stock: p.is_in_stock })
                 });
+                if (!res.ok) throw new Error(`Failed to update product: ${p.name}`);
             }
 
             alert("All changes saved successfully!");
-            fetchProducts(); // Refresh to get real IDs from DB
-        } catch (error) {
-            console.error("Failed to save changes", error);
-            alert("Failed to save some changes. Please check console.");
+            await fetchProducts(); // Refresh to get real IDs from DB
+        } catch (error: any) {
+            console.error("Failed to save changes:", error);
+            alert("Error saving shifts: " + (error.message || "Unknown error"));
+            fetchProducts(); // Revert local state to DB state for safety
         } finally {
             setIsSaving(false);
         }

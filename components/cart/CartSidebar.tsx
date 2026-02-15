@@ -10,6 +10,11 @@ import { useEffect, useState } from "react";
 export default function CartSidebar() {
     const { isCartOpen, toggleCart, items, removeItem, updateQuantity, cartTotal } = useCart();
     const [mounted, setMounted] = useState(false);
+    const [customerInfo, setCustomerInfo] = useState({
+        name: "",
+        address: "",
+        phone: ""
+    });
 
     useEffect(() => {
         setMounted(true);
@@ -77,12 +82,39 @@ export default function CartSidebar() {
                         )}
                     </div>
 
-                    <div className="p-4 border-t bg-gray-50">
+                    <div className="p-4 border-t bg-gray-50 space-y-4">
+                        {items.length > 0 && (
+                            <div className="space-y-3 mb-4">
+                                <h3 className="text-sm font-semibold text-gray-700">Customer Information</h3>
+                                <input
+                                    type="text"
+                                    placeholder="Full Name"
+                                    className="w-full p-2 text-sm border rounded-md"
+                                    value={customerInfo.name}
+                                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Phone Number"
+                                    className="w-full p-2 text-sm border rounded-md"
+                                    value={customerInfo.phone}
+                                    onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                                />
+                                <textarea
+                                    placeholder="Address"
+                                    className="w-full p-2 text-sm border rounded-md"
+                                    rows={2}
+                                    value={customerInfo.address}
+                                    onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
+                                />
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-center mb-2">
                             <span className="font-medium">Subtotal</span>
                             <span className="font-bold">PKR {cartTotal.toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
+                        <div className="flex justify-between items-center mb-2 text-sm text-gray-500">
                             <span>Delivery (Karachi)</span>
                             <span>PKR 250</span>
                         </div>
@@ -92,19 +124,22 @@ export default function CartSidebar() {
                         </p>
                         <Button
                             className="w-full text-white"
-                            disabled={items.length === 0}
+                            disabled={items.length === 0 || !customerInfo.name || !customerInfo.address || !customerInfo.phone}
                             onClick={async () => {
                                 const userEmail = localStorage.getItem("userEmail") || "Guest";
+
                                 const orderPayload = {
-                                    customer: userEmail,
+                                    customer: `${customerInfo.name} (${userEmail})`,
                                     items: items.map(item => ({
                                         id: item.id,
                                         name: item.name,
                                         price: item.price,
                                         quantity: item.quantity
                                     })),
-                                    total: cartTotal + 250, // Including Karachi delivery
-                                    city: "Karachi" // Default as per requirements
+                                    total: cartTotal + 250,
+                                    city: "Karachi",
+                                    customer_phone: customerInfo.phone,
+                                    customer_address: customerInfo.address
                                 };
 
                                 // Record order in background
@@ -118,7 +153,8 @@ export default function CartSidebar() {
                                     console.error("Failed to record order:", error);
                                 }
 
-                                const message = `Halo, saya ingin memesan:\n${items.map(item => `- ${item.name} (${item.quantity}x) - PKR ${item.price}`).join('\n')}\n\nSubtotal: PKR ${cartTotal.toLocaleString()}\nDelivery (Karachi): PKR 250\n\n*Total (Karachi): PKR ${(cartTotal + 250).toLocaleString()}*\n\n(Note: Advance payment required for outside Karachi)`;
+                                const message = `Adress: ${customerInfo.address}\nFull name: ${customerInfo.name}\nPhone number: ${customerInfo.phone}\n\nItems:\n${items.map(item => `- ${item.name} (${item.quantity}x) - PKR ${item.price}`).join('\n')}\n\nSubtotal: PKR ${cartTotal.toLocaleString()}\nDelivery (Karachi): PKR 250\n*Total (Karachi): PKR ${(cartTotal + 250).toLocaleString()}*`;
+
                                 window.open(`https://wa.me/923142003235?text=${encodeURIComponent(message)}`, '_blank');
                             }}
                         >

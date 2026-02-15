@@ -70,7 +70,7 @@ export default function Home() {
                             Chat on WhatsApp
                         </a>
                     </div>
-                    <form className="flex max-w-md mx-auto gap-2">
+                    <form className="mt-4 flex max-w-md mx-auto gap-2">
                         <input
                             type="email"
                             placeholder="Enter your email"

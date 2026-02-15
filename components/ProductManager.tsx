@@ -10,12 +10,15 @@ interface Product {
     category: string;
     price: number;
     image: string;
+    is_in_stock: boolean;
 }
 
 export default function ProductManager() {
     const [products, setProducts] = useState<Product[]>([]);
+    const [originalProducts, setOriginalProducts] = useState<Product[]>([]);
     const [isAdding, setIsAdding] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         category: "Chairs",
@@ -32,6 +35,7 @@ export default function ProductManager() {
             const res = await fetch("/api/products");
             const data = await res.json();
             setProducts(data);
+            setOriginalProducts(JSON.parse(JSON.stringify(data))); // Deep copy
         } catch (error) {
             console.error("Failed to fetch products", error);
         } finally {
@@ -39,34 +43,71 @@ export default function ProductManager() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this product?")) return;
-
-        try {
-            await fetch(`/api/products/${id}`, { method: "DELETE" });
-            setProducts(products.filter(p => p.id !== id));
-        } catch (error) {
-            console.error("Failed to delete", error);
-        }
+    const handleDelete = (id: string) => {
+        setProducts(products.filter(p => p.id !== id));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleToggleStock = (id: string) => {
+        setProducts(products.map(p =>
+            p.id === id ? { ...p, is_in_stock: !p.is_in_stock } : p
+        ));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const newProduct: Product = {
+            id: `temp-${Date.now()}`,
+            ...formData,
+            price: Number(formData.price),
+            is_in_stock: true
+        };
+        setProducts([...products, newProduct]);
+        setIsAdding(false);
+        setFormData({ name: "", category: "Chairs", price: "", image: "" });
+    };
+
+    const handleSaveAll = async () => {
+        setIsSaving(true);
         try {
-            const res = await fetch("/api/products", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
+            const productsToDelete = originalProducts.filter(op => !products.find(p => p.id === op.id));
+            const productsToAdd = products.filter(p => p.id.startsWith('temp-'));
+            const productsToUpdate = products.filter(p => {
+                if (p.id.startsWith('temp-')) return false;
+                const original = originalProducts.find(op => op.id === p.id);
+                return original && (original.is_in_stock !== p.is_in_stock);
             });
 
-            if (res.ok) {
-                const newProduct = await res.json();
-                setProducts([...products, newProduct]);
-                setIsAdding(false);
-                setFormData({ name: "", category: "Chairs", price: "", image: "" });
+            // Perform deletions
+            for (const p of productsToDelete) {
+                await fetch(`/api/products/${p.id}`, { method: "DELETE" });
             }
+
+            // Perform additions
+            for (const p of productsToAdd) {
+                const { id, ...data } = p;
+                await fetch("/api/products", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+            }
+
+            // Perform updates (stock status)
+            for (const p of productsToUpdate) {
+                await fetch(`/api/products/${p.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ is_in_stock: p.is_in_stock })
+                });
+            }
+
+            alert("All changes saved successfully!");
+            fetchProducts(); // Refresh to get real IDs from DB
         } catch (error) {
-            console.error("Failed to add product", error);
+            console.error("Failed to save changes", error);
+            alert("Failed to save some changes. Please check console.");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -102,9 +143,21 @@ export default function ProductManager() {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold font-serif">Product Management</h2>
-                <Button onClick={() => setIsAdding(!isAdding)}>
-                    {isAdding ? <><X className="mr-2 h-4 w-4" /> Cancel</> : <><Plus className="mr-2 h-4 w-4" /> Add Product</>}
-                </Button>
+                <div className="flex gap-4">
+                    {products.length !== originalProducts.length ||
+                        products.some(p => p.id.startsWith('temp-')) ||
+                        products.some(p => {
+                            const original = originalProducts.find(op => op.id === p.id);
+                            return original && original.is_in_stock !== p.is_in_stock;
+                        }) ? (
+                        <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" onClick={handleSaveAll} disabled={isSaving}>
+                            {isSaving ? "Saving..." : "Save All Changes"}
+                        </Button>
+                    ) : null}
+                    <Button onClick={() => setIsAdding(!isAdding)}>
+                        {isAdding ? <><X className="mr-2 h-4 w-4" /> Cancel</> : <><Plus className="mr-2 h-4 w-4" /> Add Product</>}
+                    </Button>
+                </div>
             </div>
 
             {isAdding && (
@@ -187,6 +240,7 @@ export default function ProductManager() {
                             <th className="p-4 font-medium text-gray-500">Name</th>
                             <th className="p-4 font-medium text-gray-500">Category</th>
                             <th className="p-4 font-medium text-gray-500">Price</th>
+                            <th className="p-4 font-medium text-gray-500">Stock Status</th>
                             <th className="p-4 font-medium text-gray-500">Actions</th>
                         </tr>
                     </thead>
@@ -201,6 +255,16 @@ export default function ProductManager() {
                                 <td className="p-4 font-medium">{product.name}</td>
                                 <td className="p-4 text-gray-500">{product.category}</td>
                                 <td className="p-4">PKR {Number(product.price).toLocaleString()}</td>
+                                <td className="p-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className={product.is_in_stock ? "text-green-600 border-green-200 hover:bg-green-50" : "text-red-600 border-red-200 hover:bg-red-50"}
+                                        onClick={() => handleToggleStock(product.id)}
+                                    >
+                                        {product.is_in_stock ? "In Stock" : "Out of Stock"}
+                                    </Button>
+                                </td>
                                 <td className="p-4">
                                     <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(product.id)}>
                                         <Trash2 className="h-4 w-4" />

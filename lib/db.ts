@@ -6,6 +6,7 @@ export interface Product {
     price: number;
     category: string;
     image: string;
+    is_in_stock: boolean;
 }
 
 export async function getProducts(): Promise<Product[]> {
@@ -30,6 +31,21 @@ export async function addProduct(product: Omit<Product, 'id'>) {
 
     if (error) {
         console.error('Error adding product:', error);
+        throw error;
+    }
+    return data;
+}
+
+export async function updateProduct(id: string, updates: Partial<Product>) {
+    const { data, error } = await supabase
+        .from('products')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating product:', error);
         throw error;
     }
     return data;

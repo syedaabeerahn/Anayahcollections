@@ -18,7 +18,7 @@ export default function Home() {
     const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
 
     useEffect(() => {
-        fetch("/api/products")
+        fetch("/api/products", { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 setFeaturedProducts(data.slice(0, 3));

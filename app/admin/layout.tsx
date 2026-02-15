@@ -22,10 +22,6 @@ export default function AdminLayout({
                         <LayoutDashboard className="h-5 w-5" />
                         Dashboard
                     </Link>
-                    <Link href="/admin/products" className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Package className="h-5 w-5" />
-                        Products
-                    </Link>
                     <Link href="/admin/orders" className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                         <ShoppingBag className="h-5 w-5" />
                         Orders

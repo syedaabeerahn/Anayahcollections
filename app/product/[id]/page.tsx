@@ -90,10 +90,6 @@ export default function ProductPage() {
 
                         <div className="space-y-4 mb-8">
                             <div className="flex items-center gap-3 text-sm text-gray-600">
-                                <Truck className="h-5 w-5 text-gray-400" />
-                                <span>Free shipping on all orders over PKR 5,000</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm text-gray-600">
                                 <ShieldCheck className="h-5 w-5 text-gray-400" />
                                 <span>2-year warranty included</span>
                             </div>

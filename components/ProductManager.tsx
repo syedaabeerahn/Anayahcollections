@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, X, Crop as CropIcon } from "lucide-react";
+import { Plus, Trash2, X, Crop as CropIcon, Save } from "lucide-react";
 import ImageCropper from "./ImageCropper";
 
 interface Product {
@@ -118,6 +118,37 @@ export default function ProductManager() {
             console.error("Failed to save changes:", error);
             alert("Error saving shifts: " + (error.message || "Unknown error"));
             fetchProducts(); // Revert local state to DB state for safety
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleSaveSingle = async (product: Product) => {
+        setIsSaving(true);
+        try {
+            const isNew = product.id.startsWith('temp-');
+            const res = await fetch(isNew ? "/api/products" : `/api/products/${product.id}`, {
+                method: isNew ? "POST" : "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(isNew ? {
+                    name: product.name,
+                    price: product.price,
+                    category: product.category,
+                    image: product.image,
+                    is_in_stock: product.is_in_stock
+                } : {
+                    is_in_stock: product.is_in_stock,
+                    image: product.image
+                })
+            });
+
+            if (!res.ok) throw new Error(`Failed to save product: ${product.name}`);
+
+            alert(`${product.name} saved successfully!`);
+            await fetchProducts(); // Refresh state
+        } catch (error: any) {
+            console.error("Failed to save product:", error);
+            alert("Error saving: " + (error.message || "Unknown error"));
         } finally {
             setIsSaving(false);
         }
@@ -307,6 +338,24 @@ export default function ProductManager() {
                                 </td>
                                 <td className="p-4">
                                     <div className="flex gap-2">
+                                        {(() => {
+                                            const original = originalProducts.find(op => op.id === product.id);
+                                            const isModified = product.id.startsWith('temp-') ||
+                                                (original && (original.is_in_stock !== product.is_in_stock || original.image !== product.image));
+
+                                            return isModified ? (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-green-600 hover:bg-green-50"
+                                                    onClick={() => handleSaveSingle(product)}
+                                                    title="Save Changes"
+                                                    disabled={isSaving}
+                                                >
+                                                    <Save className="h-4 w-4" />
+                                                </Button>
+                                            ) : null;
+                                        })()}
                                         <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/5"
                                             onClick={() => {
                                                 setCroppingProductId(product.id);

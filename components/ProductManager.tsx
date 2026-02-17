@@ -21,7 +21,7 @@ export default function ProductManager() {
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
-        category: "Chairs",
+        category: "Glass items",
         price: "",
         image: ""
     });
@@ -63,7 +63,7 @@ export default function ProductManager() {
         };
         setProducts([...products, newProduct]);
         setIsAdding(false);
-        setFormData({ name: "", category: "Chairs", price: "", image: "" });
+        setFormData({ name: "", category: "Glass items", price: "", image: "" });
     };
 
     const handleSaveAll = async () => {
@@ -187,11 +187,9 @@ export default function ProductManager() {
                                     value={formData.category}
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                 >
-                                    <option>Chairs</option>
-                                    <option>Sofas</option>
-                                    <option>Lighting</option>
-                                    <option>Decor</option>
-                                    <option>Tables</option>
+                                    <option>Glass items</option>
+                                    <option>Modern Sippers</option>
+                                    <option>Spoon sets</option>
                                 </select>
                             </div>
                             <div>

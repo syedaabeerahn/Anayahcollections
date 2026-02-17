@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X, Crop as CropIcon } from "lucide-react";
+import ImageCropper from "./ImageCropper";
 
 interface Product {
     id: string;
@@ -25,6 +26,8 @@ export default function ProductManager() {
         price: "",
         image: ""
     });
+    const [tempImage, setTempImage] = useState<string | null>(null);
+    const [croppingProductId, setCroppingProductId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchProducts();
@@ -74,7 +77,7 @@ export default function ProductManager() {
             const productsToUpdate = products.filter(p => {
                 if (p.id.startsWith('temp-')) return false;
                 const original = originalProducts.find(op => op.id === p.id);
-                return original && (original.is_in_stock !== p.is_in_stock);
+                return original && (original.is_in_stock !== p.is_in_stock || original.image !== p.image);
             });
 
             console.log("Saving changes:", { toDelete: productsToDelete.length, toAdd: productsToAdd.length, toUpdate: productsToUpdate.length });
@@ -96,12 +99,15 @@ export default function ProductManager() {
                 if (!res.ok) throw new Error(`Failed to add product: ${p.name}`);
             }
 
-            // Perform updates (stock status)
+            // Perform updates (stock status and image)
             for (const p of productsToUpdate) {
                 const res = await fetch(`/api/products/${p.id}`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ is_in_stock: p.is_in_stock })
+                    body: JSON.stringify({
+                        is_in_stock: p.is_in_stock,
+                        image: p.image
+                    })
                 });
                 if (!res.ok) throw new Error(`Failed to update product: ${p.name}`);
             }
@@ -121,10 +127,21 @@ export default function ProductManager() {
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.[0]) return;
-        setUploading(true);
         const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+            setTempImage(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        const isExistingProduct = !!croppingProductId;
+        setTempImage(null);
+        setCroppingProductId(null);
+        setUploading(true);
         const data = new FormData();
-        data.append("file", file);
+        data.append("file", croppedBlob, "cropped-image.jpg");
 
         try {
             const res = await fetch("/api/upload", {
@@ -133,7 +150,13 @@ export default function ProductManager() {
             });
             const json = await res.json();
             if (json.success) {
-                setFormData({ ...formData, image: json.url });
+                if (isExistingProduct) {
+                    setProducts(products.map(p =>
+                        p.id === croppingProductId ? { ...p, image: json.url } : p
+                    ));
+                } else {
+                    setFormData({ ...formData, image: json.url });
+                }
             } else {
                 throw new Error(json.error || "Upload failed");
             }
@@ -238,6 +261,17 @@ export default function ProductManager() {
                 </div>
             )}
 
+            {tempImage && (
+                <ImageCropper
+                    imageSrc={tempImage}
+                    onCropComplete={handleCropComplete}
+                    onCancel={() => {
+                        setTempImage(null);
+                        setCroppingProductId(null);
+                    }}
+                />
+            )}
+
             <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
                 <table className="w-full text-left">
                     <thead className="bg-gray-50">
@@ -272,9 +306,20 @@ export default function ProductManager() {
                                     </Button>
                                 </td>
                                 <td className="p-4">
-                                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(product.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex gap-2">
+                                        <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/5"
+                                            onClick={() => {
+                                                setCroppingProductId(product.id);
+                                                setTempImage(product.image);
+                                            }}
+                                            title="Crop Image"
+                                        >
+                                            <CropIcon className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(product.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

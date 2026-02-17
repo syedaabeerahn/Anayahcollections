@@ -134,10 +134,12 @@ export default function ProductManager() {
             const json = await res.json();
             if (json.success) {
                 setFormData({ ...formData, image: json.url });
+            } else {
+                throw new Error(json.error || "Upload failed");
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Upload failed", error);
-            alert("Upload failed");
+            alert("Upload failed: " + (error.message || "Unknown error"));
         } finally {
             setUploading(false);
         }
